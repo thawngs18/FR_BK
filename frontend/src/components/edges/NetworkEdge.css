@@ -1,0 +1,15 @@
+.network-edge-midpoint {
+  fill: #fff;
+  stroke: #1a1a1a;
+  stroke-width: 1.5;
+  cursor: grab;
+  pointer-events: all;
+}
+
+.network-edge-midpoint:active {
+  cursor: grabbing;
+}
+
+.network-edge-controls {
+  pointer-events: all;
+}
