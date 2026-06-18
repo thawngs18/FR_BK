@@ -1,0 +1,9 @@
+# Bỏ qua môi trường ảo của Python
+backend/venv/
+backend/__pycache__/
+
+# Bỏ qua thư viện của Node.js
+frontend/node_modules/
+
+# TUYỆT ĐỐI KHÔNG ĐẨY FILE NÀY LÊN GITHUB
+backend/.env

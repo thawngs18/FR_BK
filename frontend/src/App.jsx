@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -14,10 +14,13 @@ import './App.css';
 import Sidebar from './components/Sidebar';
 import PromptBar from './components/PromptBar';
 import Toolbar from './components/Toolbar';
+import ValidationPanel from './components/ValidationPanel';
 import DeviceNode from './components/nodes/DeviceNode';
 import NetworkEdge from './components/edges/NetworkEdge';
 import { NETWORK_ITEMS, NETWORK_ITEM_MAP } from './config/networkItems';
 import { NodeActionsContext } from './context/NodeActionsContext';
+import { generateArchitecture, validateArchitecture } from './api/client';
+import { architectureToFlow, toArchitecturePayload } from './utils/diagramTransform';
 
 const STORAGE_KEY = 'network-diagram';
 
@@ -75,28 +78,40 @@ function loadFromShareParam() {
   return null;
 }
 
+let initialDiagramCache = null;
+
+function getInitialDiagram() {
+  if (initialDiagramCache) return initialDiagramCache;
+
+  const shared = loadFromShareParam();
+  const saved = shared ?? loadDiagram();
+  if (!saved) {
+    initialDiagramCache = { nodes: [], edges: [] };
+    return initialDiagramCache;
+  }
+
+  syncNodeIdCounter(saved.nodes);
+  initialDiagramCache = {
+    nodes: saved.nodes,
+    edges: saved.edges.map((edge) => ({
+      ...edge,
+      type: 'network',
+      style: EDGE_STYLE,
+      data: { offset: edge.data?.offset ?? 20 },
+    })),
+  };
+  return initialDiagramCache;
+}
+
 export default function App() {
   const reactFlowWrapper = useRef(null);
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [nodes, setNodes] = useState(() => getInitialDiagram().nodes);
+  const [edges, setEdges] = useState(() => getInitialDiagram().edges);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-
-  useEffect(() => {
-    const shared = loadFromShareParam();
-    const saved = shared ?? loadDiagram();
-    if (saved) {
-      syncNodeIdCounter(saved.nodes);
-      setNodes(saved.nodes);
-      setEdges(
-        saved.edges.map((edge) => ({
-          ...edge,
-          type: 'network',
-          style: EDGE_STYLE,
-          data: { offset: edge.data?.offset ?? 20 },
-        }))
-      );
-    }
-  }, []);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [validationResult, setValidationResult] = useState(null);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -184,8 +199,30 @@ export default function App() {
     });
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
+
+    if (nodes.length === 0) {
+      return { saved: true, message: 'Đã lưu (sơ đồ trống)' };
+    }
+
+    setSaveLoading(true);
+    try {
+      const architecture = toArchitecturePayload(nodes, edges);
+      const result = await validateArchitecture(architecture);
+      setValidationResult(result);
+      return {
+        saved: true,
+        message: `Đã lưu · Điểm: ${result.score}/100`,
+      };
+    } catch (err) {
+      return {
+        saved: true,
+        message: `Đã lưu local · AI: ${err.message}`,
+      };
+    } finally {
+      setSaveLoading(false);
+    }
   }, [nodes, edges]);
 
   const handleShare = useCallback(async () => {
@@ -199,9 +236,35 @@ export default function App() {
     }
   }, [nodes, edges]);
 
-  const handlePromptSubmit = useCallback((prompt) => {
-    console.log('Prompt submitted:', prompt);
-  }, []);
+  const handlePromptSubmit = useCallback(
+    async (prompt) => {
+      setPromptLoading(true);
+      setStatusMessage('');
+      setValidationResult(null);
+
+      try {
+        const { architecture, summary } = await generateArchitecture(prompt);
+        const { nodes: flowNodes, edges: flowEdges } = architectureToFlow(
+          architecture,
+          EDGE_STYLE
+        );
+
+        syncNodeIdCounter(flowNodes);
+        setNodes(flowNodes);
+        setEdges(flowEdges);
+        setStatusMessage(summary);
+
+        requestAnimationFrame(() => {
+          reactFlowInstance?.fitView({ padding: 0.2 });
+        });
+      } catch (err) {
+        setStatusMessage(err.message || 'Không thể tạo kiến trúc. Kiểm tra backend đang chạy.');
+      } finally {
+        setPromptLoading(false);
+      }
+    },
+    [reactFlowInstance]
+  );
 
   const nodeActions = { onDeleteNode, onCopyNode };
 
@@ -236,8 +299,16 @@ export default function App() {
             <Controls position="bottom-left" showInteractive />
           </ReactFlow>
         </NodeActionsContext.Provider>
-        <Toolbar onSave={handleSave} onShare={handleShare} />
-        <PromptBar onSubmit={handlePromptSubmit} />
+        <ValidationPanel
+          result={validationResult}
+          onClose={() => setValidationResult(null)}
+        />
+        <Toolbar onSave={handleSave} onShare={handleShare} saveLoading={saveLoading} />
+        <PromptBar
+          onSubmit={handlePromptSubmit}
+          loading={promptLoading}
+          statusMessage={statusMessage}
+        />
       </div>
     </div>
   );
