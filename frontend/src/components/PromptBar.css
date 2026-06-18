@@ -1,0 +1,49 @@
+.prompt-bar {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 160px));
+  z-index: 10;
+  pointer-events: none;
+}
+
+.prompt-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #1a1a1a;
+  border-radius: 9999px;
+  background: #fff;
+  padding: 6px 6px 6px 22px;
+  pointer-events: auto;
+}
+
+.prompt-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1a1a1a;
+  background: transparent;
+  min-width: 0;
+}
+
+.prompt-submit {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #9dd4ef;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.prompt-submit:hover {
+  background: #7ec4e8;
+}
