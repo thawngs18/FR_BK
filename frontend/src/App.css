@@ -69,12 +69,5 @@
 }
 
 .canvas-area .react-flow__edgeupdater {
-  fill: #fff;
-  stroke: #2563eb;
-  stroke-width: 1.5;
-  r: 5;
-}
-
-.canvas-area .react-flow__edgeupdater:hover {
-  fill: #eff6ff;
+  display: none;
 }

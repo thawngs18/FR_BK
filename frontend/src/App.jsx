@@ -7,6 +7,7 @@ import ReactFlow, {
   applyNodeChanges,
   applyEdgeChanges,
   ConnectionLineType,
+  ConnectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './App.css';
@@ -21,6 +22,8 @@ import { NETWORK_ITEMS, NETWORK_ITEM_MAP } from './config/networkItems';
 import { NodeActionsContext } from './context/NodeActionsContext';
 import { generateArchitecture, validateArchitecture } from './api/client';
 import { architectureToFlow, toArchitecturePayload } from './utils/diagramTransform';
+import { EDGE_STUB } from './utils/orthogonalRouter';
+import { NODE_HEIGHT, NODE_WIDTH } from './utils/nodeMetrics';
 
 const STORAGE_KEY = 'network-diagram';
 
@@ -29,7 +32,7 @@ const EDGE_STYLE = { stroke: '#1a1a1a', strokeWidth: 1.5 };
 const defaultEdgeOptions = {
   type: 'network',
   style: EDGE_STYLE,
-  data: { offset: 20 },
+  data: { offset: EDGE_STUB },
 };
 
 const nodeTypes = Object.fromEntries(
@@ -97,7 +100,13 @@ function getInitialDiagram() {
       ...edge,
       type: 'network',
       style: EDGE_STYLE,
-      data: { offset: edge.data?.offset ?? 20 },
+      data: {
+        offset: edge.data?.offset ?? EDGE_STUB,
+        waypoints: edge.data?.waypoints,
+        manualRoute: edge.data?.manualRoute ?? false,
+        protocol: edge.data?.protocol,
+        port: edge.data?.port,
+      },
     })),
   };
   return initialDiagramCache;
@@ -131,7 +140,7 @@ export default function App() {
             ...connection,
             type: 'network',
             style: EDGE_STYLE,
-            data: { offset: 20 },
+            data: { offset: EDGE_STUB, waypoints: undefined, manualRoute: false },
           },
           eds
         )
@@ -141,11 +150,27 @@ export default function App() {
 
   const onReconnect = useCallback(
     (oldEdge, newConnection) =>
-      setEdges((eds) => reconnectEdge(oldEdge, newConnection, eds)),
+      setEdges((eds) => {
+        const updated = reconnectEdge(oldEdge, newConnection, eds);
+        return updated.map((edge) =>
+          edge.id === oldEdge.id
+            ? {
+                ...edge,
+                data: {
+                  ...edge.data,
+                  waypoints: undefined,
+                  manualRoute: false,
+                  offset: edge.data?.offset ?? EDGE_STUB,
+                },
+              }
+            : edge
+        );
+      }),
     []
   );
 
-  const onEdgeDoubleClick = useCallback((_, edge) => {
+  const onEdgeContextMenu = useCallback((event, edge) => {
+    event.preventDefault();
     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
   }, []);
 
@@ -170,6 +195,8 @@ export default function App() {
           id: getId(),
           type,
           position,
+          width: NODE_WIDTH,
+          height: NODE_HEIGHT,
           data: { type, label: NETWORK_ITEM_MAP[type]?.label ?? type },
         })
       );
@@ -281,16 +308,18 @@ export default function App() {
             defaultEdgeOptions={defaultEdgeOptions}
             connectionLineType={ConnectionLineType.SmoothStep}
             connectionLineStyle={EDGE_STYLE}
-            connectionRadius={24}
-            edgesReconnectable
+            connectionMode={ConnectionMode.Loose}
+            connectionRadius={32}
+            nodeDragHandle=".device-node-drag"
+            edgesReconnectable={false}
             edgesFocusable
-            deleteKeyCode={['Delete', 'Backspace']}
+            deleteKeyCode={null}
             elevateEdgesOnSelect
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onReconnect={onReconnect}
-            onEdgeDoubleClick={onEdgeDoubleClick}
+            onEdgeContextMenu={onEdgeContextMenu}
             onInit={setReactFlowInstance}
             onDrop={onDrop}
             onDragOver={onDragOver}

@@ -1,15 +1,46 @@
-.network-edge-midpoint {
-  fill: #fff;
-  stroke: #1a1a1a;
-  stroke-width: 1.5;
+.network-edge-hit {
+  pointer-events: stroke;
   cursor: grab;
-  pointer-events: all;
 }
 
-.network-edge-midpoint:active {
+.network-edge-segment {
+  fill: #fff;
+  stroke: #2563eb;
+  stroke-width: 1.5;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.network-edge-segment--horizontal {
+  cursor: ns-resize;
+}
+
+.network-edge-segment--vertical {
+  cursor: ew-resize;
+}
+
+.network-edge-segment:active {
+  fill: #eff6ff;
   cursor: grabbing;
 }
 
+.network-edge-waypoint {
+  fill: #fff;
+  stroke: #1a1a1a;
+  stroke-width: 1.5;
+  pointer-events: all;
+  cursor: move;
+}
+
+.network-edge-waypoint:active {
+  fill: #f5f5f5;
+  stroke: #2563eb;
+}
+
 .network-edge-controls {
+  pointer-events: all;
+}
+
+.network-edge-controls > * {
   pointer-events: all;
 }

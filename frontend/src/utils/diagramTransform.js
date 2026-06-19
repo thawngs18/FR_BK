@@ -1,3 +1,6 @@
+import { EDGE_STUB } from './orthogonalRouter';
+import { NODE_HEIGHT, NODE_WIDTH } from './nodeMetrics';
+
 const TYPE_MAP = {
   router: 'router',
   switch: 'port-switch',
@@ -57,6 +60,8 @@ export function architectureToFlow(architecture, edgeStyle) {
         x: (index % 4) * 220 + 80,
         y: Math.floor(index / 4) * 160 + 80,
       },
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
       data: {
         type,
         label: node.label ?? type,
@@ -74,7 +79,9 @@ export function architectureToFlow(architecture, edgeStyle) {
     type: 'network',
     style: edgeStyle,
     data: {
-      offset: 20,
+      offset: EDGE_STUB,
+      waypoints: undefined,
+      manualRoute: false,
       protocol: edge.protocol,
       port: edge.port,
       encrypted: edge.encrypted,

@@ -3,16 +3,17 @@ import { Handle, Position } from 'reactflow';
 import { NETWORK_ITEM_MAP } from '../../config/networkItems';
 import { useNodeActions } from '../../context/NodeActionsContext';
 import { ServerIcon, DeleteIcon, CopyIcon } from '../icons';
+import { NODE_HEIGHT, NODE_WIDTH } from '../../utils/nodeMetrics';
 import './DeviceNode.css';
 
 const HANDLE_SIDES = [
-  { position: Position.Top, className: 'device-handle--top' },
-  { position: Position.Right, className: 'device-handle--right' },
-  { position: Position.Bottom, className: 'device-handle--bottom' },
-  { position: Position.Left, className: 'device-handle--left' },
+  { position: Position.Top, id: 'top', className: 'device-handle--top' },
+  { position: Position.Right, id: 'right', className: 'device-handle--right' },
+  { position: Position.Bottom, id: 'bottom', className: 'device-handle--bottom' },
+  { position: Position.Left, id: 'left', className: 'device-handle--left' },
 ];
 
-function DeviceNode({ id, data, type: nodeType }) {
+function DeviceNode({ id, data, type: nodeType, selected, width, height }) {
   const type = data.type ?? nodeType ?? 'server';
   const item = NETWORK_ITEM_MAP[type];
   const Icon = item?.Icon ?? ServerIcon;
@@ -50,24 +51,23 @@ function DeviceNode({ id, data, type: nodeType }) {
     setMenuOpen(false);
   };
 
+  const isHighlighted = selected || menuOpen;
+
   return (
-    <div className={`device-node${menuOpen ? ' device-node--active' : ''}`}>
-      <div className="device-node-body" onContextMenu={handleContextMenu}>
-        {HANDLE_SIDES.map(({ position, className }) => (
+    <div
+      className={`device-node${isHighlighted ? ' device-node--active' : ''}`}
+      style={{ width: width ?? NODE_WIDTH, minHeight: height ?? NODE_HEIGHT }}
+    >
+      <div
+        className="device-node-body device-node-drag"
+        onContextMenu={handleContextMenu}
+      >
+        {HANDLE_SIDES.map(({ position, id: handleId, className }) => (
           <Handle
-            key={`src-${position}`}
+            key={handleId}
             type="source"
             position={position}
-            id={`src-${position}`}
-            className={`device-handle ${className}`}
-          />
-        ))}
-        {HANDLE_SIDES.map(({ position, className }) => (
-          <Handle
-            key={`tgt-${position}`}
-            type="target"
-            position={position}
-            id={`tgt-${position}`}
+            id={handleId}
             className={`device-handle ${className}`}
           />
         ))}
@@ -85,7 +85,7 @@ function DeviceNode({ id, data, type: nodeType }) {
           </div>
         )}
       </div>
-      <span className="device-node-label">{label}</span>
+      <span className="device-node-label device-node-drag">{label}</span>
     </div>
   );
 }
